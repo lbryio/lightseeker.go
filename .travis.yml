@@ -1,0 +1,21 @@
+os: linux
+dist: bionic
+language: go
+go:
+  - 1.13.1
+  - master
+
+install: true
+
+cache:
+  directories:
+    - $HOME/.cache/go-build
+    - $HOME/gopath/pkg/mod
+
+
+env:
+  global:
+    - GO111MODULE=on
+
+script:
+  - make
