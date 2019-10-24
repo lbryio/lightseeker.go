@@ -1,4 +1,4 @@
-package channel
+package claim
 
 import (
 	"encoding/json"
@@ -9,16 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"search-benchmark/data"
-
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 	"github.com/uber-go/atomic"
 )
 
 type taskData struct {
-	channel   string
-	claimID   string
-	searchURL string
+	searchTerm string
+	claimID    string
+	searchURL  string
 }
 
 type errorStack struct {
@@ -43,9 +41,10 @@ type ExactMatchBenchmark struct {
 	work             chan taskData
 	errors           *errorStack
 	runTime          time.Duration
+	data             map[string]string
 }
 
-func New(wg *sync.WaitGroup, workers int) *ExactMatchBenchmark {
+func New(wg *sync.WaitGroup, workers int, data map[string]string) *ExactMatchBenchmark {
 	return &ExactMatchBenchmark{
 		wg:   wg,
 		work: make(chan taskData),
@@ -57,6 +56,7 @@ func New(wg *sync.WaitGroup, workers int) *ExactMatchBenchmark {
 		thresholdMatches: atomic.NewInt32(0),
 		matches:          atomic.NewInt32(0),
 		workers:          workers,
+		data:             data,
 	}
 }
 
@@ -66,16 +66,21 @@ func (e *ExactMatchBenchmark) Timing() time.Duration {
 
 func (e *ExactMatchBenchmark) Summary() string {
 	instaRate := e.Rate() * 100
-	thresholdRate := float64(e.thresholdMatches.Load()) / float64(len(data.ChannelsToResolve)) * 100
-	wholesomeRate := float64(e.matches.Load()) / float64(len(data.ChannelsToResolve)) * 100
+	thresholdRate := float64(e.thresholdMatches.Load()) / float64(len(e.data)) * 100
+	wholesomeRate := float64(e.matches.Load()) / float64(len(e.data)) * 100
 	return fmt.Sprintf(`Instant match rate: %.2f
 Threshold match rate: %.2f
 Wholesome match rate: %.2f
-Errors: %d`, instaRate, thresholdRate, wholesomeRate, len(e.errors.errors))
+Errors: %d
+Timing: %s`, instaRate, thresholdRate, wholesomeRate, len(e.errors.errors), e.Timing().String())
+}
+
+func (e *ExactMatchBenchmark) Errors() []error {
+	return e.errors.errors
 }
 
 func (e *ExactMatchBenchmark) Rate() float64 {
-	return float64(e.instaMatches.Load()) / float64(len(data.ChannelsToResolve))
+	return float64(e.instaMatches.Load()) / float64(len(e.data))
 }
 
 func (e *ExactMatchBenchmark) Start() {
@@ -98,11 +103,11 @@ func (e *ExactMatchBenchmark) SetTolerance(t int) {
 }
 
 func (e *ExactMatchBenchmark) produce() {
-	for channel, claimID := range data.ChannelsToResolve {
+	for searchTerm, claimID := range e.data {
 		e.work <- taskData{
-			channel:   channel,
-			claimID:   claimID,
-			searchURL: fmt.Sprintf("https://dev.lighthouse.lbry.com/search?s=%s&size=20", url.QueryEscape(channel)),
+			searchTerm: searchTerm,
+			claimID:    claimID,
+			searchURL:  fmt.Sprintf("https://dev.lighthouse.lbry.com/search?s=%s&size=20", url.QueryEscape(searchTerm)),
 		}
 	}
 	close(e.work)
@@ -146,7 +151,7 @@ outer:
 			continue
 		}
 		for i, r := range searchResponse {
-			if r.Name == s.channel && r.ClaimID == s.claimID {
+			if r.Name == s.searchTerm && r.ClaimID == s.claimID {
 				if i == 0 {
 					e.instaMatches.Add(1)
 				}
@@ -157,6 +162,6 @@ outer:
 				continue outer
 			}
 		}
-		fmt.Printf("no results for %s - %s\n", s.channel, s.claimID) //todo: export it to a value rather than printing it
+		fmt.Printf("no results for %s - %s\n", s.searchTerm, s.claimID) //todo: export it to a value rather than printing it
 	}
 }

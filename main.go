@@ -4,17 +4,25 @@ import (
 	"fmt"
 	"sync"
 
-	"search-benchmark/channel"
+	"search-benchmark/claim"
+	"search-benchmark/data"
 )
 
 func main() {
-	wg := &sync.WaitGroup{}
-	//benchmarks := make([]benchmark, 1)
-	eMB := channel.New(wg, 8)
-	//benchmarks[0] = eMB
-	eMB.SetTolerance(3)
-	eMB.Start()
-	wg.Wait()
-	fmt.Println(eMB.Summary())
-	//fmt.Printf("Channels found in search resuts: %d/%d (%.2f%%)\n", found.Load(), len(data.ChannelsToResolve), float64(found.Load())/float64(len(data.ChannelsToResolve))*100.0)
+	testData := []map[string]string{
+		//data.ChannelsToResolve,
+		//data.StreamsToResolve,
+		data.TitlesToResolve,
+	}
+	for _, t := range testData {
+		wg := &sync.WaitGroup{}
+		eMB := claim.New(wg, 8, t)
+		eMB.SetTolerance(3)
+		eMB.Start()
+		wg.Wait()
+		for _, e := range eMB.Errors() {
+			fmt.Println(e.Error())
+		}
+		fmt.Println(eMB.Summary())
+	}
 }
