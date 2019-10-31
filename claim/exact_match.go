@@ -42,6 +42,7 @@ type ExactMatchBenchmark struct {
 	errors           *errorStack
 	runTime          time.Duration
 	data             map[string]string
+	endPoint         string
 }
 
 func New(wg *sync.WaitGroup, workers int, data map[string]string) *ExactMatchBenchmark {
@@ -57,6 +58,7 @@ func New(wg *sync.WaitGroup, workers int, data map[string]string) *ExactMatchBen
 		matches:          atomic.NewInt32(0),
 		workers:          workers,
 		data:             data,
+		endPoint:         "https://dev.lighthouse.lbry.com/",
 	}
 }
 
@@ -107,7 +109,7 @@ func (e *ExactMatchBenchmark) produce() {
 		e.work <- taskData{
 			searchTerm: searchTerm,
 			claimID:    claimID,
-			searchURL:  fmt.Sprintf("https://dev.lighthouse.lbry.com/search?s=%s&size=20", url.QueryEscape(searchTerm)),
+			searchURL:  fmt.Sprintf("%ssearch?s=%s&size=20", e.endPoint, url.QueryEscape(searchTerm)),
 		}
 	}
 	close(e.work)
@@ -151,7 +153,7 @@ outer:
 			continue
 		}
 		for i, r := range searchResponse {
-			if r.Name == s.searchTerm && r.ClaimID == s.claimID {
+			if r.ClaimID == s.claimID {
 				if i == 0 {
 					e.instaMatches.Add(1)
 				}
@@ -164,4 +166,8 @@ outer:
 		}
 		fmt.Printf("no results for %s - %s\n", s.searchTerm, s.claimID) //todo: export it to a value rather than printing it
 	}
+}
+
+func (e *ExactMatchBenchmark) SetEndpoint(endpoint string) {
+	e.endPoint = endpoint
 }
