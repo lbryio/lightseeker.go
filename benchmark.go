@@ -6,7 +6,9 @@ import (
 
 type benchmark interface {
 	Start()
-	Rate() float64
+	InstantholdRate() float64
+	ThresholdRate() float64
+	WholesomeRate() float64
 	Summary() string
 	Timing() time.Duration
 }

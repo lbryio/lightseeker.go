@@ -67,7 +67,7 @@ func (e *ExactMatchBenchmark) Timing() time.Duration {
 }
 
 func (e *ExactMatchBenchmark) Summary() string {
-	instaRate := e.Rate() * 100
+	instaRate := e.InstantRate() * 100
 	thresholdRate := float64(e.thresholdMatches.Load()) / float64(len(e.data)) * 100
 	wholesomeRate := float64(e.matches.Load()) / float64(len(e.data)) * 100
 	return fmt.Sprintf(`Instant match rate: %.2f
@@ -81,8 +81,16 @@ func (e *ExactMatchBenchmark) Errors() []error {
 	return e.errors.errors
 }
 
-func (e *ExactMatchBenchmark) Rate() float64 {
+func (e *ExactMatchBenchmark) InstantRate() float64 {
 	return float64(e.instaMatches.Load()) / float64(len(e.data))
+}
+
+func (e *ExactMatchBenchmark) ThresholdRate() float64 {
+	return float64(e.thresholdMatches.Load()) / float64(len(e.data))
+}
+
+func (e *ExactMatchBenchmark) WholesomeRate() float64 {
+	return float64(e.matches.Load()) / float64(len(e.data))
 }
 
 func (e *ExactMatchBenchmark) Start() {
