@@ -19,7 +19,7 @@ func main() {
 		"resolve streams":  data.StreamsToResolve,
 		"resolve titles":   data.TitlesToResolve,
 	}
-	testedInstance := "sdk"
+	testedInstance := "dev"
 	endpoints := map[string]engine.SearchEngine{
 		"prod":  engine.NewLightHouseEngine("https://lighthouse.lbry.com/"),
 		"dev":   engine.NewLightHouseEngine("https://dev.lighthouse.lbry.com/"),

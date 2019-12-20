@@ -12,7 +12,7 @@ import (
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 )
 
-// CREATE TABLE `results` (
+//CREATE TABLE `results` (
 //  `id` bigint(20) NOT NULL AUTO_INCREMENT,
 //  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 //  `instance` varchar(50) DEFAULT NULL,
@@ -24,8 +24,10 @@ import (
 //  `wholesome_rate` float DEFAULT NULL,
 //  `errors` int(11) DEFAULT NULL,
 //  `timing` int(11) DEFAULT NULL,
+//  `version` varchar(120) DEFAULT NULL,
+//  `commit_hash` varchar(120) DEFAULT NULL,
 //  PRIMARY KEY (`id`)
-//) ENGINE=InnoDB DEFAULT CHARSET=latin1
+//) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=latin1
 var db *sql.DB
 
 func connect() error {
@@ -67,8 +69,8 @@ func StoreResults(instance string, engine engine.SearchEngine, description strin
 		return err
 	}
 	log.Printf("version: %s\ncommit: %s", ver.SemVer, ver.CommitHash)
-	_, err = db.Query("INSERT INTO benchmark.results(`instance`,`endpoint`,`description`,`threshold`,`instant_rate`,`threshold_rate`,`wholesome_rate`,`errors`,`timing`)"+
-		" values(?,?,?,?,?,?,?,?,?)", instance, engine.GetEndpoint(), description, results.Tolerance, results.InstantRate, results.ThresholdRate, results.WholesomeRate, results.Errors, results.Timing)
+	_, err = db.Query("INSERT INTO benchmark.results(`instance`,`endpoint`,`description`,`threshold`,`instant_rate`,`threshold_rate`,`wholesome_rate`,`errors`,`timing`,`version`,`commit_hash`)"+
+		" values(?,?,?,?,?,?,?,?,?,?,?)", instance, engine.GetEndpoint(), description, results.Tolerance, results.InstantRate, results.ThresholdRate, results.WholesomeRate, results.Errors, results.Timing, ver.SemVer, ver.CommitHash)
 	if err != nil {
 		return errors.Err(err)
 	}
