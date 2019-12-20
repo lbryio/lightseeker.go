@@ -1,22 +1,18 @@
 package claim
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
-	"github.com/lbryio/lbry.go/v2/extras/errors"
+	"search-benchmark/engine"
+
 	"github.com/uber-go/atomic"
 )
 
 type taskData struct {
 	searchTerm string
 	claimID    string
-	searchURL  string
 }
 
 type errorStack struct {
@@ -42,7 +38,7 @@ type ExactMatchBenchmark struct {
 	errors           *errorStack
 	runTime          time.Duration
 	data             map[string]string
-	endPoint         string
+	engine           engine.SearchEngine
 }
 
 func New(wg *sync.WaitGroup, workers int, data map[string]string) *ExactMatchBenchmark {
@@ -58,7 +54,7 @@ func New(wg *sync.WaitGroup, workers int, data map[string]string) *ExactMatchBen
 		matches:          atomic.NewInt32(0),
 		workers:          workers,
 		data:             data,
-		endPoint:         "https://dev.lighthouse.lbry.com/",
+		engine:           engine.NewLightHouseEngine("https://dev.lighthouse.lbry.com/"),
 	}
 }
 
@@ -117,7 +113,6 @@ func (e *ExactMatchBenchmark) produce() {
 		e.work <- taskData{
 			searchTerm: searchTerm,
 			claimID:    claimID,
-			searchURL:  fmt.Sprintf("%ssearch?s=%s&size=20", e.endPoint, url.QueryEscape(searchTerm)),
 		}
 	}
 	close(e.work)
@@ -132,32 +127,9 @@ outer:
 		if !more {
 			return
 		}
-
-		req, err := http.NewRequest("GET", s.searchURL, nil)
+		searchResponse, err := e.engine.Query(s.searchTerm)
 		if err != nil {
-			e.errors.Append(errors.Err(err))
-			continue
-		}
-
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			e.errors.Append(errors.Err(err))
-			continue
-		}
-
-		body, err := ioutil.ReadAll(res.Body)
-		res.Body.Close()
-		if err != nil {
-			e.errors.Append(errors.Err(err))
-			continue
-		}
-		var searchResponse []struct {
-			Name    string `json:"name"`
-			ClaimID string `json:"claimId"`
-		}
-		err = json.Unmarshal(body, &searchResponse)
-		if err != nil {
-			e.errors.Append(errors.Err(err))
+			e.errors.Append(err)
 			continue
 		}
 		for i, r := range searchResponse {
@@ -176,6 +148,6 @@ outer:
 	}
 }
 
-func (e *ExactMatchBenchmark) SetEndpoint(endpoint string) {
-	e.endPoint = endpoint
+func (e *ExactMatchBenchmark) SetEngine(engine engine.SearchEngine) {
+	e.engine = engine
 }

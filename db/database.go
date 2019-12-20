@@ -3,7 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
+
+	"search-benchmark/engine"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/lbryio/lbry.go/v2/extras/errors"
@@ -52,16 +55,20 @@ type Results struct {
 	Timing        int64
 }
 
-func StoreResults(instance string, endpoint string, description string, results Results) error {
+func StoreResults(instance string, engine engine.SearchEngine, description string, results Results) error {
 	if db == nil {
 		err := connect()
 		if err != nil {
 			return err
 		}
 	}
-
-	_, err := db.Query("INSERT INTO benchmark.results(`instance`,`endpoint`,`description`,`threshold`,`instant_rate`,`threshold_rate`,`wholesome_rate`,`errors`,`timing`)"+
-		" values(?,?,?,?,?,?,?,?,?)", instance, endpoint, description, results.Tolerance, results.InstantRate, results.ThresholdRate, results.WholesomeRate, results.Errors, results.Timing)
+	ver, err := engine.Version()
+	if err != nil {
+		return err
+	}
+	log.Printf("version: %s\ncommit: %s", ver.SemVer, ver.CommitHash)
+	_, err = db.Query("INSERT INTO benchmark.results(`instance`,`endpoint`,`description`,`threshold`,`instant_rate`,`threshold_rate`,`wholesome_rate`,`errors`,`timing`)"+
+		" values(?,?,?,?,?,?,?,?,?)", instance, engine.GetEndpoint(), description, results.Tolerance, results.InstantRate, results.ThresholdRate, results.WholesomeRate, results.Errors, results.Timing)
 	if err != nil {
 		return errors.Err(err)
 	}
